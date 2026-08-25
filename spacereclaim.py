@@ -634,8 +634,8 @@ class SpaceReclaimWindow(Gtk.Window):
             for path in dlg.get_filenames():
                 path = os.path.abspath(path)
                 exists = any(
-                    os.path.abspath(self.roots_store[r][0]) == path
-                    for r in self.roots_store)
+                    os.path.abspath(row[0]) == path
+                    for row in self.roots_store)
                 if not exists:
                     self.roots_store.append([path])
         dlg.destroy()
@@ -654,7 +654,7 @@ class SpaceReclaimWindow(Gtk.Window):
             self.btn_scan.set_sensitive(False)
             self.status_label.set_text("Cancelling...")
             return
-        roots = [self.roots_store[r][0] for r in self.roots_store]
+        roots = [row[0] for row in self.roots_store]
         if not roots:
             self._flash("Add at least one folder first.")
             return
