@@ -516,13 +516,6 @@ class SpaceReclaimWindow(Gtk.Window):
         col_del = Gtk.TreeViewColumn("Delete")
         col_del.pack_start(rend, False)
         col_del.add_attribute(rend, "active", COL_CHECKED)
-        self.view.append_column(col_del)
-
-        cell_path = Gtk.CellRendererText()
-        cell_path.set_property("ellipsize", Pango.EllipsizeMode.MIDDLE)
-        col_path = Gtk.TreeViewColumn("Path", cell_path, text=COL_PATH)
-        col_path.set_expand(True)
-        col_path.set_sort_column_id(COL_PATH)
 
         self.master_check = Gtk.CheckButton()
         self.master_check.set_tooltip_text("Select / deselect all")
@@ -531,8 +524,15 @@ class SpaceReclaimWindow(Gtk.Window):
         self.master_check.set_margin_start(6)
         self.master_check.set_margin_end(6)
         self.master_check.connect("toggled", self.on_master_toggled)
-        col_path.set_widget(self.master_check)
-        col_path.set_clickable(False)
+        col_del.set_widget(self.master_check)
+        col_del.set_clickable(False)
+        self.view.append_column(col_del)
+
+        cell_path = Gtk.CellRendererText()
+        cell_path.set_property("ellipsize", Pango.EllipsizeMode.MIDDLE)
+        col_path = Gtk.TreeViewColumn("Path", cell_path, text=COL_PATH)
+        col_path.set_expand(True)
+        col_path.set_sort_column_id(COL_PATH)
         self.view.append_column(col_path)
 
         cell_size = Gtk.CellRendererText()
