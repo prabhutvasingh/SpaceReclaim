@@ -409,6 +409,7 @@ class SpaceReclaimWindow(Gtk.Window):
         self.rows_total = 0
         self.bytes_wasted = 0
         self.css_provider = Gtk.CssProvider()
+        self._syncing_master = False
         self.theme = self._initial_theme()
 
         self._build_headerbar()
@@ -515,8 +516,17 @@ class SpaceReclaimWindow(Gtk.Window):
         col_del = Gtk.TreeViewColumn("Delete")
         col_del.pack_start(rend, False)
         col_del.add_attribute(rend, "active", COL_CHECKED)
-        col_del.set_sort_column_id(COL_CHECKED)
         self.view.append_column(col_del)
+
+        self.master_check = Gtk.CheckButton()
+        self.master_check.set_tooltip_text("Select / deselect all")
+        self.master_check.set_halign(Gtk.Align.CENTER)
+        self.master_check.set_valign(Gtk.Align.CENTER)
+        self.master_check.set_margin_start(6)
+        self.master_check.set_margin_end(6)
+        self.master_check.connect("toggled", self.on_master_toggled)
+        col_del.set_widget(self.master_check)
+        col_del.set_clickable(False)
 
         cell_path = Gtk.CellRendererText()
         cell_path.set_property("ellipsize", Pango.EllipsizeMode.MIDDLE)
@@ -557,11 +567,6 @@ class SpaceReclaimWindow(Gtk.Window):
         self.lbl_reclaim = Gtk.Label(label="")
         self.lbl_reclaim.get_style_context().add_class("reclaim-label")
         ab.pack_start(self.lbl_reclaim)
-
-        btn_select_all = Gtk.Button(label="Select all")
-        btn_select_all.connect("clicked", self.on_select_all)
-        btn_select_all.get_style_context().add_class("accent")
-        ab.pack_end(btn_select_all)
 
         btn_keep = Gtk.Button(label="Keep one per set")
         btn_keep.connect("clicked", self.on_keep_one)
@@ -734,10 +739,13 @@ class SpaceReclaimWindow(Gtk.Window):
                              not self.store.get_value(it, COL_CHECKED))
         self._refresh_stats()
 
-    def on_select_all(self, _widget):
+    def on_master_toggled(self, widget):
+        if self._syncing_master:
+            return
+        state = widget.get_active()
         it = self.store.get_iter_first()
         while it is not None:
-            self.store.set_value(it, COL_CHECKED, True)
+            self.store.set_value(it, COL_CHECKED, state)
             it = self.store.iter_next(it)
         self._refresh_stats()
 
@@ -828,11 +836,26 @@ class SpaceReclaimWindow(Gtk.Window):
 
     def _refresh_stats(self):
         reclaim = 0
+        checked = 0
+        total = 0
         it = self.store.get_iter_first()
         while it is not None:
             if self.store.get_value(it, COL_CHECKED):
                 reclaim += self.store.get_value(it, COL_BYTES)
+                checked += 1
+            total += 1
             it = self.store.iter_next(it)
+        self._syncing_master = True
+        if total and checked == total:
+            self.master_check.set_active(True)
+            self.master_check.set_inconsistent(False)
+        elif checked == 0:
+            self.master_check.set_active(False)
+            self.master_check.set_inconsistent(False)
+        else:
+            self.master_check.set_active(True)
+            self.master_check.set_inconsistent(True)
+        self._syncing_master = False
         self.lbl_reclaim.set_text(f"Will free: {fmt(reclaim)}")
         self.lbl_summary.set_text(
             f"{self.rows_total} duplicate files in {self.sets_total} sets"
