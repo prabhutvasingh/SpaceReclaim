@@ -505,7 +505,6 @@ class SpaceReclaimWindow(Gtk.Window):
         main.pack_start(self.progress_bar, False, False, 0)
 
         self.store = Gtk.ListStore(bool, str, str, int, str)
-        self.store.set_sort_func(COL_SET, self._sort_set, None)
         self.view = Gtk.TreeView(model=self.store)
         self.view.set_headers_clickable(True)
         self.view.set_show_expanders(False)
@@ -558,6 +557,11 @@ class SpaceReclaimWindow(Gtk.Window):
         self.lbl_reclaim = Gtk.Label(label="")
         self.lbl_reclaim.get_style_context().add_class("reclaim-label")
         ab.pack_start(self.lbl_reclaim)
+
+        btn_select_all = Gtk.Button(label="Select all")
+        btn_select_all.connect("clicked", self.on_select_all)
+        btn_select_all.get_style_context().add_class("accent")
+        ab.pack_end(btn_select_all)
 
         btn_keep = Gtk.Button(label="Keep one per set")
         btn_keep.connect("clicked", self.on_keep_one)
@@ -708,7 +712,7 @@ class SpaceReclaimWindow(Gtk.Window):
                 return
             for gi, group in enumerate(groups, start=1):
                 for path, size in group:
-                    self.store.append([False, path, fmt(size), size, f"#{gi}"])
+                    self.store.append([False, path, fmt(size), size, f"#{gi:05d}"])
             self.sets_total = len(groups)
             self.rows_total = sum(len(g) for g in groups)
             self.bytes_wasted = sum(size for g in groups for _p, size in g)
@@ -728,6 +732,13 @@ class SpaceReclaimWindow(Gtk.Window):
         it = self.store.get_iter(path)
         self.store.set_value(it, COL_CHECKED,
                              not self.store.get_value(it, COL_CHECKED))
+        self._refresh_stats()
+
+    def on_select_all(self, _widget):
+        it = self.store.get_iter_first()
+        while it is not None:
+            self.store.set_value(it, COL_CHECKED, True)
+            it = self.store.iter_next(it)
         self._refresh_stats()
 
     def on_clear_selection(self, _widget):
@@ -827,12 +838,6 @@ class SpaceReclaimWindow(Gtk.Window):
             f"{self.rows_total} duplicate files in {self.sets_total} sets"
             f" ({fmt(self.bytes_wasted)} wasted)")
         self.btn_delete.set_sensitive(not self.deleting)
-
-    def _sort_set(self, model, a, b, _data):
-        # keep model iteration order stable: compare by row number
-        ia = a.get_indices()[0]
-        ib = b.get_indices()[0]
-        return -1 if ia < ib else (1 if ia > ib else 0)
 
     def _flash(self, text):
         def _f():
